@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Carteira",
+    "slug": "carteira-github-v2",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "backgroundColor": "#ED1761",
+    "android": {
+      "package": "com.exemplo.carteirav2",
+      "versionCode": 1,
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "plugins": [
+      [
+        "expo-status-bar",
+        {
+          "hidden": true,
+          "style": "light"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#ED1761"
+        }
+      ]
+    ]
+  }
+}
