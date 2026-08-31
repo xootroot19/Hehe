@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
       - name: Checkout
@@ -23,18 +23,88 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
+          distribution: temurin
           java-version: "17"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android API 36
+      - name: Install Android API
         run: |
           yes | sdkmanager --licenses > /dev/null || true
           sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install dependencies
+        run: |
+          npm install --no-audit --no-fund
+
+      - name: Expo prebuild
+        run: |
+          rm -rf android
+          npx expo prebuild --platform android --non-interactive --clean
+
+      - name: Test JavaScript bundle
+        run: |
+          npx expo export --platform android --output-dir dist
+
+      - name: Build release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Find unsigned APK
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+
+          if [ -z "$APK" ]; then
+            echo "APK não encontrado"
+            exit 1
+          fi
+
+          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
+
+      - name: Generate signing key
+        run: |
+          keytool -genkeypair \
+            -v \
+            -keystore "$RUNNER_TEMP/release.jks" \
+            -storepass "github-actions-demo" \
+            -keypass "github-actions-demo" \
+            -alias "release" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Carteira, O=Carteira, C=BR"
+
+      - name: Sign APK
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "apksigner não encontrado"
+            exit 1
+          fi
+
+          "$APKSIGNER" sign \
+            --ks "$RUNNER_TEMP/release.jks" \
+            --ks-pass pass:github-actions-demo \
+            --key-pass pass:github-actions-demo \
+            --ks-key-alias release \
+            --out app-release.apk \
+            "$APK_PATH"
+
+          "$APKSIGNER" verify \
+            --verbose \
+            app-release.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: app-release.apk
+          if-no-files-found: error
+          retention-days: 30      - name: Install dependencies
         run: npm install --no-audit --no-fund
 
       - name: Expo prebuild
