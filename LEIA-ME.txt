@@ -1,0 +1,12 @@
+SUBSTITUA ESTES ARQUIVOS NO REPOSITÓRIO
+
+1. App.js
+2. package.json
+3. app.json
+4. .github/workflows/android.yml
+
+Importante:
+- Remova package-lock.json antigo, se existir, antes do próximo build.
+- Não envie a pasta android antiga. O workflow gera uma nova com expo prebuild.
+- A splash animada continua no App.js.
+- expo-splash-screen foi removido para eliminar a referência quebrada a drawable/splashscreen_logo.

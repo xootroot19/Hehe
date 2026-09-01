@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Carteira",
+    "slug": "carteira-v2",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "androidStatusBar": {
+      "hidden": true,
+      "translucent": true
+    },
+    "android": {
+      "package": "com.exemplo.carteirav2",
+      "versionCode": 1
+    }
+  }
+}
