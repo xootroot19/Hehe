@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -23,51 +23,40 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: "temurin"
           java-version: "17"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android API
-        run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Install Android API 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install dependencies
-        run: |
-          npm install --no-audit --no-fund
+        run: npm install --no-audit --no-fund
+
+      - name: Clean generated Android
+        run: rm -rf android
 
       - name: Expo prebuild
-        run: |
-          rm -rf android
-          npx expo prebuild --platform android --non-interactive --clean
+        run: npx expo prebuild --platform android --non-interactive --clean
 
       - name: Test JavaScript bundle
-        run: |
-          npx expo export --platform android --output-dir dist
+        run: npx expo export --platform android --output-dir dist
 
       - name: Build release APK
         working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+        run: ./gradlew assembleRelease --no-daemon --console=plain
 
       - name: Find APK
         run: |
-          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
-
-          if [ -z "$APK" ]; then
-            echo "APK não encontrado"
-            exit 1
-          fi
-
-          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          test -n "$APK_PATH"
+          cp "$APK_PATH" unsigned-release.apk
 
       - name: Generate signing key
         run: |
           keytool -genkeypair \
-            -v \
             -keystore "$RUNNER_TEMP/release.jks" \
             -storepass "github-actions-demo" \
             -keypass "github-actions-demo" \
@@ -75,16 +64,11 @@ jobs:
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
-            -dname "CN=Carteira, O=Carteira, C=BR"
+            -dname "CN=Carteira, O=Demo, C=BR"
 
       - name: Sign APK
         run: |
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
-
-          if [ -z "$APKSIGNER" ]; then
-            echo "apksigner não encontrado"
-            exit 1
-          fi
 
           "$APKSIGNER" sign \
             --ks "$RUNNER_TEMP/release.jks" \
@@ -92,7 +76,7 @@ jobs:
             --key-pass pass:github-actions-demo \
             --ks-key-alias release \
             --out app-release.apk \
-            "$APK_PATH"
+            unsigned-release.apk
 
           "$APKSIGNER" verify --verbose app-release.apk
 
